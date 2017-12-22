@@ -1,4 +1,4 @@
-﻿package org.processmining.plugins.cnmining;
+package org.processmining.plugins.cnmining;
  
 import com.carrotsearch.hppc.IntArrayList;
 import com.carrotsearch.hppc.IntIntOpenHashMap;
@@ -841,7 +841,8 @@ public class CNMining
 	public static void bestEdge(Graph unfolded_g, double[][] m, ObjectArrayList<Constraint> lista_vincoli_positivi_unfolded, ObjectArrayList<Constraint> lista_vincoli_positivi_folded, ObjectArrayList<Constraint> vincoli_negati, ObjectArrayList<Forbidden> lista_forbidden, ObjectArrayList<Forbidden> lista_forbidden_unfolded, ObjectIntOpenHashMap<String> map, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> attivita_tracce, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> traccia_attivita, double[][] csm, double sigma, Graph folded_g, ObjectIntOpenHashMap<String> folded_map)
 	{
 		sigma = -100.0D;
-		
+		Node x = new Node(bestBodyNode, map.get(bestBodyNode));
+		Node a = new Node(bestHeadNode, map.get(bestHeadNode));
 		for (int i = 0; i < lista_vincoli_positivi_unfolded.size(); i++)
 		{
 			Constraint vincolo = (Constraint)lista_vincoli_positivi_unfolded.get(i);
@@ -869,8 +870,7 @@ public class CNMining
 					}
 				}
          
-				Node x = new Node(bestBodyNode, map.get(bestBodyNode));
-				Node a = new Node(bestHeadNode, map.get(bestHeadNode));
+				
          
 				if (!unfolded_g.isConnected(x, a))
 				{
@@ -1716,18 +1716,21 @@ public class CNMining
                                                 return mNext;
         }
 	
+        private ObjectArrayList<String> metodoManutenzione(ObjectArrayList<String> value){
+        return new ObjectArrayList<String>(value);
+        }
+        
 	public double[][] buildBestNextMatrix(XLog log, ObjectIntOpenHashMap<String> map, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> traccia_attivita, double[][] cs, ObjectArrayList<Forbidden> lista_forbidden_unfolded)
 	{
 		double[][] mNext = new double[map.size()][map.size()];
      
 		Object[] values = traccia_attivita.values;
+                ObjectArrayList<String> predecessors = new ObjectArrayList<String>();
 		for (int i = 0; i < traccia_attivita.allocated.length; i++) {
 			if (traccia_attivita.allocated[i] != false)
 			{
 				ObjectArrayList<String> value = (ObjectArrayList)values[i];
-          
-				ObjectArrayList<String> predecessors = new ObjectArrayList<String>();
-				ObjectArrayList<String> successors = new ObjectArrayList<String>(value);
+                                ObjectArrayList<String> successors = metodoManutenzione(value);
          
 				int count = 0;
  
@@ -1809,13 +1812,17 @@ public class CNMining
 		}
 	}
         
+        private Edge metodoManutenzione3 ( Node zz, Node ww){
+            return  new Edge(zz, ww);
+        }
+        
         public static Node[] nPCP1(ObjectArrayList<Node> listaNodiPath, Node z, Node w, Node zz, Node ww, Graph unfolded_g, ObjectArrayList<Edge> archiRimossi, double[][] csm, double minCs){
             for (int i = 0; i < listaNodiPath.size() - 1; i++) {
 						for (int j = i + 1; j < listaNodiPath.size(); j++)
 						{
 							zz = (Node)listaNodiPath.get(i);
 							ww = (Node)listaNodiPath.get(j);
-							Edge e = new Edge(zz, ww);
+							Edge e = metodoManutenzione3(zz,ww);
                
 							if (unfolded_g.getLista_archi().contains(e))
 							{ 
@@ -1933,16 +1940,26 @@ public class CNMining
 					}
         }
 	
+        private Node metodoManutenzione (Forbidden f,ObjectIntOpenHashMap<String> map ){
+            return new Node(f.getB(), map.get(f.getB()));
+        }
+
+        private Node metodoManutenzione2 (Forbidden f,ObjectIntOpenHashMap<String> map ){
+            return new Node(f.getB(), map.get(f.getB()));
+        }
+        
 	public void noPathConstraints(Graph unfolded_g, double[][] m, ObjectArrayList<Constraint> lista_vincoli_positivi_unfolded, ObjectArrayList<Constraint> lista_vincoli_positivi_folded, ObjectArrayList<Constraint> vincoli_negati_unfolded, ObjectArrayList<Constraint> vincoli_negati, ObjectArrayList<Forbidden> lista_forbidden, ObjectArrayList<Forbidden> lista_forbidden_unfolded, ObjectIntOpenHashMap<String> map, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> attivita_tracce, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> traccia_attivita, double[][] csm, double sigma, Graph folded_g, ObjectIntOpenHashMap<String> folded_map)
   	{
 		Object[] buffer = lista_forbidden_unfolded.buffer;
+                ObjectArrayList<Node> listaNodiPath = new ObjectArrayList<Node>();
+                ObjectArrayList<Edge> archiRimossi = new ObjectArrayList<Edge>();
+                Node [] zw = new Node[2];
 		for (int k = 0; k < lista_forbidden_unfolded.size(); k++)
 		{
 			Forbidden f = (Forbidden)buffer[k];
        
-			Node x = new Node(f.getB(), map.get(f.getB()));
-			Node y = new Node(f.getA(), map.get(f.getA()));
-       
+			Node x = metodoManutenzione(f,map);
+                        Node y = metodoManutenzione2(f,map);
 			if (unfolded_g.isConnected(x, y)) {
 				unfolded_g.removeEdge(x, y);
 			}
@@ -1951,14 +1968,14 @@ public class CNMining
 				n.setMark(false);
 			}
        
-			ObjectArrayList<Node> listaNodiPath = new ObjectArrayList<Node>();
+			
        
 			boolean spezzaPath = bfs(unfolded_g, x, y, null, listaNodiPath);
         
 			if (spezzaPath)
 			{
 				
-				ObjectArrayList<Edge> archiRimossi = new ObjectArrayList<Edge>();
+				
 				
 				do
 				{
@@ -1968,8 +1985,6 @@ public class CNMining
 					Node w = null;
 					Node zz = null;
 					Node ww = null;
-                                        
-                                        Node [] zw = new Node[2];
                                         zw = nPCP1(listaNodiPath, z, w, zz, ww, unfolded_g, archiRimossi, csm, minCs);
                                         z = zw[0];
                                         w = zw[1];
@@ -2212,7 +2227,14 @@ public class CNMining
 					}
             return best_succ;
         }
- 
+        
+    private Node metodoManutenzione4(Forbidden f,ObjectIntOpenHashMap<String> map){
+        return new Node(f.getB(), map.get(f.getB()));
+    }
+    private Node metodoManutenzione5(Forbidden f,ObjectIntOpenHashMap<String> map){
+        return new Node(f.getA(), map.get(f.getA()));
+    }
+        
 	public static void eliminaForbidden(Graph g, ObjectArrayList<Forbidden> lista_forbidden_unfolded, ObjectArrayList<Forbidden> lista_forbidden, ObjectIntOpenHashMap<String> map, double[][] m, double[][] csm, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> attivita_tracce, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> traccia_attivita, ObjectArrayList<Constraint> vincoli_positivi, ObjectArrayList<Constraint> vincoli_negati, Graph folded_g, ObjectIntOpenHashMap<String> folded_map)
 	{
 		int it = 0;
@@ -2220,10 +2242,9 @@ public class CNMining
 		while (it < lista_forbidden_unfolded.size())
 		{
 			Forbidden f = (Forbidden)lista_forbidden_unfolded.get(it);
-       
-			Node x = new Node(f.getB(), map.get(f.getB()));
-			Node y = new Node(f.getA(), map.get(f.getA()));
-       
+                        Node x = metodoManutenzione4(f,map);
+                        Node y = metodoManutenzione5(f,map);
+     
 			if (g.isConnected(x, y))
 			{
 				boolean vincoli_soddisfatti = verificaVincoliPositivi(
@@ -2574,7 +2595,16 @@ public class CNMining
 				}
             return best_pred;
         }
- 
+        
+     
+    private ObjectArrayList<String> metodoManutenzione7(String attivita_z, Node ny){
+        return new Forbidden(attivita_z.split("#")[0], ny.getNomeAttivita().split("#")[0]);
+    }
+
+    private ObjectArrayList<String> metodoManutenzione99(String attivita_z, ObjectIntOpenHashMap<String> folded_map){
+        return new Node(attivita_z.split("#")[0], folded_map.get(attivita_z.split("#")[0]));
+    }
+        
 	private String getFinalBestPred(Graph graph, double[][] csm, Node ny, ObjectIntOpenHashMap<String> map, ObjectArrayList<String> lista_candidati_best_pred_unfolded, ObjectArrayList<Constraint> vincoli_negati, ObjectArrayList<Forbidden> lista_forbidden, Graph folded_g, ObjectIntOpenHashMap<String> folded_map, boolean onlyNotPath)
 	{
 		for (ObjectCursor<Node> n : folded_g.listaNodi()) {
@@ -2590,15 +2620,15 @@ public class CNMining
 		if (onlyNotPath) {
 			minZ = 0.0D;
 		}
+                ObjectArrayList<Node> c_nodes = new ObjectArrayList<Node>();
 		for (ObjectCursor<String> attivita_zCursor : lista_candidati_best_pred_unfolded) {
 			String attivita_z = (String)attivita_zCursor.value;
        
-			ObjectArrayList<Node> c_nodes = new ObjectArrayList<Node>();
+			
        
 			int violations_counter = 0;
        
-			Forbidden f = new Forbidden(attivita_z.split("#")[0], ny.getNomeAttivita().split("#")[0]);
-       
+                        Forbidden f = metodoManutenzione7(attivita_z,ny);       
 			if (!lista_forbidden.contains(f))
 			{ 
                             gFBPP1(vincoli_negati, attivita_z, c_nodes, folded_map);
@@ -2609,7 +2639,7 @@ public class CNMining
                                 violations_counter = gFBPP2(localIterator5, localIterator6, n, folded_g, violations_counter);
 				
          
-				Node z = new Node(attivita_z.split("#")[0], folded_map.get(attivita_z.split("#")[0]));
+                                Node z = metodoManutenzione99(attivita_z,folded_map);
          
 				Iterator localIterator7 = folded_g.listaNodi().iterator();
 				localIterator5 = folded_g.listaNodi().iterator();
@@ -2673,7 +2703,11 @@ public class CNMining
 				}
             return violations_counter;
         }
- 
+        
+        private Forbidden metodoManutenzione9(ObjectCursor<String> attivita_w,Node nx){
+            return new Forbidden(nx.getNomeAttivita().split("#")[0], ((String)attivita_w.value).split("#")[0]);
+        }
+        
 	private String getFinalBestSucc(Graph graph, double[][] csm, Node nx, ObjectIntOpenHashMap<String> map, ObjectArrayList<String> lista_candidati_best_succ_unfolded, ObjectArrayList<Constraint> vincoli_negati, ObjectArrayList<Forbidden> lista_forbidden, Graph folded_g, ObjectIntOpenHashMap<String> folded_map, boolean notPathOnly)
 	{
 		for (ObjectCursor<Node> n : folded_g.listaNodi()) {
@@ -2696,8 +2730,7 @@ public class CNMining
 		{
 			int violations_counter = 0;
        
-			Forbidden f = new Forbidden(nx.getNomeAttivita().split("#")[0], ((String)attivita_w.value).split("#")[0]);
-        
+                        Forbidden f = metodoManutenzione9(attivita_w,nx);
 			if (!lista_forbidden.contains(f))
 			{
                                 String temp13 = (String)attivita_w.value;
@@ -3143,6 +3176,7 @@ public class CNMining
     
 		int cursor = 0;
 		Iterator localIterator1 = g.listaNodi().iterator();
+                ObjectOpenHashSet<String> candidati = new ObjectOpenHashSet();
 		do
 		{	
 			ObjectCursor<Node> nn = (ObjectCursor)localIterator1.next();
@@ -3158,7 +3192,6 @@ public class CNMining
 				cursor++;
 			}
 			else {
-				ObjectOpenHashSet<String> candidati = new ObjectOpenHashSet();
 				
                                 rDIP1(g, n, adjacent_i, candidati);
 								     
@@ -3332,7 +3365,28 @@ public class CNMining
 					}
 				}
         }
- 
+        
+        private IntOpenHashSet[] metodoManutenzione100(ObjectArrayList<String> traccia){
+               return new IntOpenHashSet[traccia.size()];
+        }
+        
+        private IntArrayList[] metodoManutenzione101(ObjectArrayList<String> traccia){
+               return new IntArrayList[traccia.size()];
+        }
+          
+        private IntOpenHashSet[] metodoManutenzione102(ObjectArrayList<String> traccia){
+               return new IntOpenHashSet[traccia.size()];
+        }
+            
+        private IntArrayList[] metodoManutenzione103(ObjectArrayList<String> traccia){
+               return new IntArrayList[traccia.size()];
+        }
+        
+        
+    private int[] metodoManutenzione32(int tracciaSize){
+       return new int[tracciaSize];
+    }
+        
 	public void computeBindings(Graph g, ObjectObjectOpenHashMap<String, ObjectArrayList<String>> traccia_attivita, ObjectIntOpenHashMap<String> map)
 	{
 		Object[] values = traccia_attivita.values;
@@ -3341,11 +3395,11 @@ public class CNMining
 			if (traccia_attivita.allocated[it1] != false) {
 				traccia = (ObjectArrayList)values[it1];
          
-				IntOpenHashSet[] outputBindings = new IntOpenHashSet[traccia.size()];
-				IntArrayList[] outputBindingsExtended = new IntArrayList[traccia.size()];
+				IntOpenHashSet[] outputBindings = metodoManutenzione100(traccia);
+				IntArrayList[] outputBindingsExtended = metodoManutenzione101(traccia);
          
-				IntOpenHashSet[] inputBindings = new IntOpenHashSet[traccia.size()];
-				IntArrayList[] inputBindingsExtended = new IntArrayList[traccia.size()];
+				IntOpenHashSet[] inputBindings = metodoManutenzione102(traccia);
+				IntArrayList[] inputBindingsExtended = metodoManutenzione103(traccia);
          
 				for (int i = 0; i < traccia.size(); i++) {
 					outputBindings[i] = new IntOpenHashSet();
@@ -3354,7 +3408,7 @@ public class CNMining
 					inputBindingsExtended[i] = new IntArrayList();
 				}
          
-				int[] activitiesIDMapping = new int[traccia.size()];
+				int[] activitiesIDMapping = metodoManutenzione32(traccia.size());
          
 				for (int i = 0; i < traccia.size(); i++)
 				{
